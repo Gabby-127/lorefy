@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}{{ character.name }} - Lorefy{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="wiki-container">
+        <div class="wiki-main">
+            <div class="wiki-header">
+                <h1 class="wiki-character-name">{{ character.name }}</h1>
+                {% if character.quote %}
+                <div class="wiki-quote">"{{ character.quote }}"</div>
+                {% endif %}
+            </div>
+
+            <div class="wiki-tabs">
+                <button class="wiki-tab active" onclick="switchTab('profile')">Profile</button>
+                <button class="wiki-tab" onclick="switchTab('assets')">Assets</button>
+                <button class="wiki-tab" onclick="switchTab('relationships')">Relationships</button>
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="profile" class="wiki-tab-content active">
+                {% if character.background %}
+                <div class="wiki-section">
+                    <h4>Background</h4>
+                    <p>{{ character.background }}</p>
+                </div>
+                {% endif %}
+
+                {% if character.personality %}
+                <div class="wiki-section">
+                    <h4>Personality</h4>
+                    <p>{{ character.personality }}</p>
+                </div>
+                {% endif %}
+
+                {% if character.misc %}
+                <div class="wiki-section">
+                    <h4>Misc</h4>
+                    <p>{{ character.misc }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Assets Tab -->
+            <div id="assets" class="wiki-tab-content">
+                <div class="tracklist">
+                    {% for emotion in emotions %}
+                    <div class="tracklist-row">
+                        <div class="tracklist-index">{{ loop.index }}</div>
+                        <div class="tracklist-label">{{ emotion|capitalize }}</div>
+                        <div class="tracklist-image" id="asset-{{ emotion }}">
+                            {% set asset = assets_by_emotion.get(emotion) %}
+                            {% if asset %}
+                                <img src="{{ asset.file_path }}" alt="{{ emotion }}" onclick="openLightbox('{{ asset.file_path }}')" style="cursor: pointer;">
+                            {% else %}
+                                <span>—</span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('character_edit', character_id=character.id) }}" class="tracklist-action">
+                            {% if assets_by_emotion.get(emotion) %}Replace{% else %}Upload{% endif %}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Relationships Tab -->
+            <div id="relationships" class="wiki-tab-content">
+                {% if relationships %}
+                    <div class="relationships-list">
+                        {% for rel in relationships %}
+                        {% set other_char = rel.character_b if rel.character_a_id == character.id else rel.character_a %}
+                        <div class="relationship-item">
+                            <div class="relationship-avatar">
+                                {% set other_neutral = other_char.assets|selectattr('emotion', 'equalto', 'neutral')|first %}
+                                {% if other_neutral %}
+                                    <img src="{{ other_neutral.file_path }}" alt="{{ other_char.name }}">
+                                {% else %}
+                                    🎭
+                                {% endif %}
+                            </div>
+                            <div class="relationship-info">
+                                <div class="relationship-name">{{ other_char.name }}</div>
+                                <div class="relationship-label">{{ rel.get_label() }}</div>
+                                <div class="relationship-bar">
+                                    {% set hue = (rel.score - 1) * (120 / 9) %}
+                                    <div class="relationship-bar-fill" style="width: {{ (rel.score / 10 * 100) }}%; background: hsl({{ hue }}, 100%, 50%);"></div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="color: var(--text-secondary); text-align: center; padding: 40px 20px;">
+                        No relationships yet — start a chat to build one.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="wiki-sidebar">
+            <div class="wiki-portrait">
+                {% if character.profile_image_path %}
+                    <img src="/{{ character.profile_image_path }}" alt="{{ character.name }}">
+                {% else %}
+                    {% set neutral_asset = character.assets|selectattr('emotion', 'equalto', 'neutral')|first %}
+                    {% if neutral_asset %}
+                        <img src="/{{ neutral_asset.file_path }}" alt="{{ character.name }}">
+                    {% else %}
+                        <span style="color: var(--text-subdued); font-size: 48px;">🎭</span>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="wiki-stats">
+                {% if character.age %}
+                <div class="wiki-stat">
+                    <span class="wiki-stat-label">Age</span>
+                    <span class="wiki-stat-value">{{ character.age }}</span>
+                </div>
+                {% endif %}
+                
+                {% if character.birthday %}
+                <div class="wiki-stat">
+                    <span class="wiki-stat-label">Birthday</span>
+                    <span class="wiki-stat-value">{{ character.birthday }}</span>
+                </div>
+                {% endif %}
+                
+                {% if character.zodiac %}
+                <div class="wiki-stat">
+                    <span class="wiki-stat-label">Zodiac</span>
+                    <span class="wiki-stat-value">{{ character.zodiac }}</span>
+                </div>
+                {% endif %}
+                
+                {% if character.height %}
+                <div class="wiki-stat">
+                    <span class="wiki-stat-label">Height</span>
+                    <span class="wiki-stat-value">{{ character.height }}</span>
+                </div>
+                {% endif %}
+                
+                {% if character.homeland %}
+                <div class="wiki-stat">
+                    <span class="wiki-stat-label">Homeland</span>
+                    <span class="wiki-stat-value">{{ character.homeland }}</span>
+                </div>
+                {% endif %}
+                
+                {% if character.mbti %}
+                <div class="wiki-stat">
+                    <span class="wiki-stat-label">MBTI</span>
+                    <span class="wiki-stat-value">{{ character.mbti }}</span>
+                </div>
+                {% endif %}
+                
+                {% if character.temperament %}
+                <div class="wiki-stat">
+                    <span class="wiki-stat-label">Temperament</span>
+                    <span class="wiki-stat-value">{{ character.temperament }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="wiki-actions">
+                <a href="{{ url_for('index') }}" class="btn btn-secondary" style="text-align: center;">← All Characters</a>
+                <a href="{{ url_for('character_edit', character_id=character.id) }}" class="btn btn-secondary" style="text-align: center;">Edit Character</a>
+                <a href="{{ url_for('chat_setup') }}" class="btn btn-primary" style="text-align: center;">Start Chat</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 999; display: none; align-items: center; justify-content: center;" onclick="closeLightbox()">
+    <img id="lightbox-image" style="max-width: 90%; max-height: 90%; object-fit: contain;" onclick="event.stopPropagation()">
+</div>
+
+<script>
+function switchTab(tabName) {
+    document.querySelectorAll('.wiki-tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.wiki-tab').forEach(el => el.classList.remove('active'));
+    
+    document.getElementById(tabName).classList.add('active');
+    event.target.classList.add('active');
+}
+
+function openLightbox(imagePath) {
+    const lightbox = document.getElementById('lightbox');
+    const image = document.getElementById('lightbox-image');
+    image.src = imagePath;
+    lightbox.style.display = 'flex';
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeLightbox();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Start Chat - Lorefy{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Start a Chat</h1>
+
+    {% if error %}
+    <div class="error-message">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" onsubmit="validateForm(event)">
+        <div class="form-section">
+            <h3>Select Characters</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="character_a_id">Character A</label>
+                    <select id="character_a_id" name="character_a_id" required onchange="validateCharacterSelection()">
+                        <option value="">Choose a character...</option>
+                        {% for character in characters %}
+                        <option value="{{ character.id }}">{{ character.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="character_b_id">Character B</label>
+                    <select id="character_b_id" name="character_b_id" required onchange="validateCharacterSelection()">
+                        <option value="">Choose a character...</option>
+                        {% for character in characters %}
+                        <option value="{{ character.id }}">{{ character.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div id="character-error" class="error-message" style="display: none; margin-bottom: 16px;">
+                Please select two different characters.
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Choose a Scenario</h3>
+            <div class="scenario-picker" id="scenario-picker">
+                {% for scenario in scenarios %}
+                <div class="scenario-card" onclick="selectScenario('{{ scenario }}', this)">
+                    <h4>{{ loop.index }}. {{ scenario }}</h4>
+                </div>
+                {% endfor %}
+            </div>
+            <input type="hidden" id="scenario" name="scenario" required>
+            <div id="scenario-error" class="error-message" style="display: none; margin-top: 16px;">
+                Please select a scenario.
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="btn btn-primary">Start Chat</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function selectScenario(scenario, element) {
+    document.querySelectorAll('.scenario-card').forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+    document.getElementById('scenario').value = scenario;
+    document.getElementById('scenario-error').style.display = 'none';
+}
+
+function validateCharacterSelection() {
+    const charA = document.getElementById('character_a_id').value;
+    const charB = document.getElementById('character_b_id').value;
+    const errorEl = document.getElementById('character-error');
+    
+    if (charA && charB && charA === charB) {
+        errorEl.style.display = 'block';
+    } else {
+        errorEl.style.display = 'none';
+    }
+}
+
+function validateForm(e) {
+    const charA = document.getElementById('character_a_id').value;
+    const charB = document.getElementById('character_b_id').value;
+    const scenario = document.getElementById('scenario').value;
+    const charError = document.getElementById('character-error');
+    const scenarioError = document.getElementById('scenario-error');
+    
+    let isValid = true;
+    
+    if (!charA || !charB || charA === charB) {
+        charError.style.display = 'block';
+        isValid = false;
+    } else {
+        charError.style.display = 'none';
+    }
+    
+    if (!scenario) {
+        scenarioError.style.display = 'block';
+        isValid = false;
+    } else {
+        scenarioError.style.display = 'none';
+    }
+    
+    if (!isValid) {
+        e.preventDefault();
+    }
+}
+</script>
+{% endblock %}

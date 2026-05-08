@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ character.name }} - Lorefy{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Edit {{ character.name }}</h1>
+
+    <form method="POST" enctype="multipart/form-data">
+        <!-- Basic Info -->
+        <div class="form-section">
+            <h3>Basic Info</h3>
+            
+            <div class="form-group">
+                <label for="name">Name *</label>
+                <input type="text" id="name" name="name" value="{{ character.name }}" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="age">Age</label>
+                    <input type="number" id="age" name="age" min="1" max="200" value="{{ character.age or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="birthday">Birthday</label>
+                    <input type="date" id="birthday" name="birthday" value="{{ character.birthday or '' }}" onchange="updateZodiac()">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="zodiac">Zodiac</label>
+                    <input type="text" id="zodiac" name="zodiac" value="{{ character.zodiac or '' }}" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="height">Height</label>
+                    <input type="text" id="height" name="height" value="{{ character.height or '' }}" placeholder="e.g., 5'10\", 178cm">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="homeland">Homeland / Origin</label>
+                <input type="text" id="homeland" name="homeland" value="{{ character.homeland or '' }}" placeholder="Where are they from?">
+            </div>
+        </div>
+
+        <!-- Profile Image -->
+        <div class="form-section">
+            <h3>Profile Image (Album Cover)</h3>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">Upload or replace your character's card image. PNG or JPG, max 2MB.</p>
+            <div class="emotion-slots">
+                <div class="emotion-slot">
+                    <label>Profile Picture</label>
+                    <div class="emotion-slot-preview" id="preview-container-profile">
+                        {% if character.profile_image_path %}
+                            <img id="preview-profile" src="/{{ character.profile_image_path }}" alt="Profile">
+                        {% else %}
+                            <img id="preview-profile" style="display: none;">
+                            <span id="icon-profile">🖼️</span>
+                        {% endif %}
+                    </div>
+                    <input type="file" id="profile_image" name="profile_image" accept=".png,.jpg,.jpeg" onchange="previewProfileImage()">
+                    <button type="button" class="emotion-slot-button" onclick="document.getElementById('profile_image').click();">
+                        {% if character.profile_image_path %}Replace{% else %}Upload{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lore -->
+        <div class="form-section">
+            <h3>Lore</h3>
+
+            <div class="form-group">
+                <label for="background">Background *</label>
+                <textarea id="background" name="background" required placeholder="Where did they come from? What shaped them?">{{ character.background }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="personality">Personality *</label>
+                <textarea id="personality" name="personality" required placeholder="How do they act? What drives them?">{{ character.personality }}</textarea>
+            </div>
+        </div>
+
+        <!-- Personality Profile -->
+        <div class="form-section">
+            <h3>Personality Profile</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="mbti">MBTI</label>
+                    <select id="mbti" name="mbti">
+                        <option value="">Select MBTI Type</option>
+                        {% for mbti_type in mbti_types %}
+                        <option value="{{ mbti_type }}" {% if character.mbti == mbti_type %}selected{% endif %}>{{ mbti_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="temperament">Temperament</label>
+                    <select id="temperament" name="temperament">
+                        <option value="">Select Temperament</option>
+                        {% for temp in temperaments %}
+                        <option value="{{ temp }}" {% if character.temperament == temp %}selected{% endif %}>{{ temp }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="quote">Character Quote</label>
+                <input type="text" id="quote" name="quote" value="{{ character.quote or '' }}" placeholder="Something they'd actually say...">
+            </div>
+        </div>
+
+        <!-- Misc -->
+        <div class="form-section">
+            <h3>Misc</h3>
+            <div class="form-group">
+                <label for="misc">Freeform Notes</label>
+                <textarea id="misc" name="misc" placeholder="Powers, trivia, fun facts, anything else...">{{ character.misc or '' }}</textarea>
+            </div>
+        </div>
+
+        <!-- Emotion Assets -->
+        <div class="form-section">
+            <h3>Emotion Assets</h3>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">Upload or replace emotion assets (PNG or JPG, max 2MB each).</p>
+            
+            <div class="emotion-slots">
+                {% for emotion in emotions %}
+                <div class="emotion-slot">
+                    <label>{{ emotion|capitalize }}</label>
+                    <div class="emotion-slot-preview" id="preview-container-{{ emotion }}">
+                        {% set asset = assets_by_emotion.get(emotion) %}
+                        {% if asset %}
+                            <img id="preview-{{ emotion }}" src="{{ asset.file_path }}" alt="{{ emotion }}">
+                        {% else %}
+                            <img id="preview-{{ emotion }}" style="display: none;">
+                            <span id="icon-{{ emotion }}">🖼️</span>
+                        {% endif %}
+                    </div>
+                    <input type="file" id="emotion_{{ emotion }}" name="emotion_{{ emotion }}" accept=".png,.jpg,.jpeg" onchange="previewImage('{{ emotion }}')">
+                    <button type="button" class="emotion-slot-button" onclick="document.getElementById('emotion_{{ emotion }}').click();">
+                        {% if assets_by_emotion.get(emotion) %}Replace{% else %}Upload{% endif %}
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for('character_wiki', character_id=character.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function getZodiac(date) {
+    const d = new Date(date);
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    
+    const zodiacs = [
+        { name: "Capricorn", start: [12, 22], end: [1, 19] },
+        { name: "Aquarius", start: [1, 20], end: [2, 18] },
+        { name: "Pisces", start: [2, 19], end: [3, 20] },
+        { name: "Aries", start: [3, 21], end: [4, 19] },
+        { name: "Taurus", start: [4, 20], end: [5, 20] },
+        { name: "Gemini", start: [5, 21], end: [6, 20] },
+        { name: "Cancer", start: [6, 21], end: [7, 22] },
+        { name: "Leo", start: [7, 23], end: [8, 22] },
+        { name: "Virgo", start: [8, 23], end: [9, 22] },
+        { name: "Libra", start: [9, 23], end: [10, 22] },
+        { name: "Scorpio", start: [10, 23], end: [11, 21] },
+        { name: "Sagittarius", start: [11, 22], end: [12, 21] }
+    ];
+    
+    for (const z of zodiacs) {
+        const [startMonth, startDay] = z.start;
+        const [endMonth, endDay] = z.end;
+        if ((month === startMonth && day >= startDay) || (month === endMonth && day <= endDay)) {
+            return z.name;
+        }
+    }
+    return "";
+}
+
+function updateZodiac() {
+    const birthday = document.getElementById("birthday").value;
+    const zodiacField = document.getElementById("zodiac");
+    if (birthday) {
+        zodiacField.value = getZodiac(birthday);
+    }
+}
+
+function previewProfileImage() {
+    const input = document.getElementById('profile_image');
+    const preview = document.getElementById('preview-profile');
+    const icon = document.getElementById('icon-profile');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            if (icon) icon.style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function previewImage(emotion) {
+    const input = document.getElementById(`emotion_${emotion}`);
+    const preview = document.getElementById(`preview-${emotion}`);
+    const icon = document.getElementById(`icon-${emotion}`);
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            if (icon) icon.style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

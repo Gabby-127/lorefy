@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - Lorefy{% endblock %}
+
+{% block extra_css %}
+<style>
+    main {
+        padding: 0;
+        height: calc(100vh - 80px);
+        overflow: hidden;
+    }
+
+    /* Override panel to be transparent, image fills it */
+    .chat-character-panel {
+        background: transparent !important;
+        padding: 0 !important;
+        justify-content: flex-end !important;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Image fills the entire panel */
+    .chat-character-image {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: transparent !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+    }
+
+    .chat-character-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: bottom;
+        transition: opacity 0.2s ease;
+    }
+
+    /* Name + emotion pinned above bottom edge */
+    .chat-character-name,
+    .chat-character-emotion {
+        position: relative;
+        z-index: 2;
+    }
+
+    .chat-character-name {
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 2px;
+        padding: 0 12px;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+    }
+
+    .chat-character-emotion {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+        padding: 0 12px;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+    }
+
+    /* Scrollable messages */
+    .chat-main {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: var(--bg-highlight) transparent;
+    }
+
+    .chat-messages::-webkit-scrollbar { width: 6px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--bg-highlight); border-radius: 3px; }
+
+    .chat-controls {
+        flex-shrink: 0;
+    }
+
+    /* Left side of controls: turn counter + quit */
+    .chat-controls-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .chat-quit-btn {
+        background: transparent;
+        color: var(--accent-red);
+        border: 1px solid var(--accent-red);
+        border-radius: var(--border-radius-pill);
+        padding: 8px 16px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .chat-quit-btn:hover {
+        background: rgba(226, 33, 52, 0.12);
+    }
+
+    /* Quit confirm overlay */
+    .quit-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .quit-modal {
+        background: var(--bg-elevated);
+        border-radius: var(--border-radius-card);
+        padding: 36px;
+        max-width: 400px;
+        width: calc(100% - 40px);
+        text-align: center;
+    }
+
+    .quit-modal h3 {
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+
+    .quit-modal p {
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .quit-modal-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container" data-session-id="{{ chat_session.id }}">
+
+    <!-- Left Panel: Character A -->
+    <div class="chat-character-panel" data-character-id="{{ chat_session.character_a_id }}">
+        <div class="chat-character-image">
+            {% if chat_session.character_a.profile_image_path %}
+                <img src="/{{ chat_session.character_a.profile_image_path }}" alt="{{ chat_session.character_a.name }}">
+            {% else %}
+                {% set neutral_asset = chat_session.character_a.assets|selectattr('emotion', 'equalto', 'neutral')|first %}
+                {% if neutral_asset %}
+                    <img src="/{{ neutral_asset.file_path }}" alt="{{ chat_session.character_a.name }}">
+                {% else %}
+                    <span style="color:var(--text-subdued);font-size:64px;position:relative;z-index:1;">🎭</span>
+                {% endif %}
+            {% endif %}
+        </div>
+        <div class="chat-character-name">{{ chat_session.character_a.name }}</div>
+        <div class="chat-character-emotion">neutral</div>
+    </div>
+
+    <!-- Center Panel: Chat -->
+    <div class="chat-main">
+        <div class="chat-scenario">{{ chat_session.scenario }}</div>
+        <div class="chat-messages"></div>
+        <div class="chat-controls">
+            <div class="chat-controls-left">
+                <span class="chat-turn-counter">Turn 0 / 12</span>
+                <button class="chat-quit-btn" onclick="showQuitDialog()">Quit</button>
+            </div>
+            <button class="chat-continue-btn">Continue →</button>
+        </div>
+    </div>
+
+    <!-- Right Panel: Character B -->
+    <div class="chat-character-panel" data-character-id="{{ chat_session.character_b_id }}">
+        <div class="chat-character-image flipped">
+            {% if chat_session.character_b.profile_image_path %}
+                <img src="/{{ chat_session.character_b.profile_image_path }}" alt="{{ chat_session.character_b.name }}">
+            {% else %}
+                {% set neutral_asset = chat_session.character_b.assets|selectattr('emotion', 'equalto', 'neutral')|first %}
+                {% if neutral_asset %}
+                    <img src="/{{ neutral_asset.file_path }}" alt="{{ chat_session.character_b.name }}">
+                {% else %}
+                    <span style="color:var(--text-subdued);font-size:64px;position:relative;z-index:1;">🎭</span>
+                {% endif %}
+            {% endif %}
+        </div>
+        <div class="chat-character-name">{{ chat_session.character_b.name }}</div>
+        <div class="chat-character-emotion">neutral</div>
+    </div>
+</div>
+
+<!-- Quit confirmation dialog -->
+<div class="quit-overlay" id="quit-overlay" style="display:none;">
+    <div class="quit-modal">
+        <h3>Quit this chat?</h3>
+        <p>Your progress won't be saved and the relationship score won't be updated. You'll be taken back to your characters.</p>
+        <div class="quit-modal-actions">
+            <button class="btn btn-secondary" onclick="hideQuitDialog()">Keep Going</button>
+            <a href="/" class="btn btn-primary" style="background:var(--accent-red);color:#fff;">Leave</a>
+        </div>
+    </div>
+</div>
+
+<script>
+function showQuitDialog() {
+    document.getElementById('quit-overlay').style.display = 'flex';
+}
+function hideQuitDialog() {
+    document.getElementById('quit-overlay').style.display = 'none';
+}
+document.getElementById('quit-overlay').addEventListener('click', function(e) {
+    if (e.target === this) hideQuitDialog();
+});
+</script>
+
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

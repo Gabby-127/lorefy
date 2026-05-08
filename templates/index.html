@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Lorefy{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="home-header">
+        <h1>Your Characters</h1>
+        <a href="{{ url_for('character_new') }}" class="btn btn-primary">+ Create New Character</a>
+    </div>
+
+    {% if characters %}
+        <div class="character-grid">
+            {% for character in characters %}
+            <a href="{{ url_for('character_wiki', character_id=character.id) }}" class="character-card">
+                <div class="character-card-image">
+                    {% if character.profile_image_path %}
+                        <img src="/{{ character.profile_image_path }}" alt="{{ character.name }}">
+                    {% else %}
+                        {% set neutral_asset = character.assets|selectattr('emotion', 'equalto', 'neutral')|first %}
+                        {% if neutral_asset %}
+                            <img src="/{{ neutral_asset.file_path }}" alt="{{ character.name }}">
+                        {% else %}
+                            🎭
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="character-card-title">{{ character.name }}</div>
+                <div class="character-card-meta">
+                    {% if character.mbti %}{{ character.mbti }}{% if character.temperament %} • {% endif %}{% endif %}
+                    {% if character.temperament %}{{ character.temperament }}{% endif %}
+                </div>
+                <div class="character-card-actions">
+                    <button type="button" class="btn-icon" onclick="window.location.href='{{ url_for('character_wiki', character_id=character.id) }}'; event.stopPropagation();">✏️</button>
+                    <button type="button" class="btn-icon" onclick="window.location.href='{{ url_for('chat_setup') }}'; event.stopPropagation();">💬</button>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🎭</div>
+            <h2>No characters yet</h2>
+            <p>Create your first character to get started with Lorefy</p>
+            <a href="{{ url_for('character_new') }}" class="btn btn-primary">Create Your First Character</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
